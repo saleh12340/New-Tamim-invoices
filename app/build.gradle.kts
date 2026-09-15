@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.aistudio.smartnotes.pkzyxw"
+        applicationId = "com.aistudio.salesinvoice.vbwrtz"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
