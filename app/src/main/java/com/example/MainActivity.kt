@@ -34,7 +34,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "notes_db").build()
+        val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "notes_db")
+            .fallbackToDestructiveMigration()
+            .build()
         val repository = NoteRepository(db.noteDao(), applicationContext)
         val factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {

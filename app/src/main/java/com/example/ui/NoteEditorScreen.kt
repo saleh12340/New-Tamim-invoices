@@ -91,42 +91,86 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
 
     fun printNote() {
         val grandTotal = currentItems.sumOf { it.quantity * it.price }
+        val dateFormatted = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(currentNote?.timestamp ?: System.currentTimeMillis()))
+        val invNum = currentNote?.invoiceNumber.orEmpty().ifBlank { currentNote?.id?.toString() ?: "1" }
+        val custName = currentNote?.customerName.orEmpty().ifBlank { "عميل عام" }
+
         val html = buildString {
-            append("<html><head><meta charset='UTF-8'><style>")
-            append("@page{margin:0;size:auto;}html,body{margin:0;padding:0;width:100%;}")
-            append("body{font-family:sans-serif;direction:rtl;font-size:12px;line-height:1.15;color:#000;padding:2px 3px;box-sizing:border-box;}")
-            append(".center{text-align:center}.right{text-align:right}.line{margin:1px 0;padding:0}.items{margin-top:3px}")
-            append(".item{display:flex;direction:rtl;width:100%;margin:0;padding:0;border-bottom:1px dashed #777;line-height:1.15;}")
-            append(".name{flex:1;text-align:right;word-break:break-word}.qty{width:38px;text-align:center}.total{width:58px;text-align:left;font-weight:bold}")
-            append(".grand{font-weight:bold;font-size:14px;margin-top:2px;border-top:1px solid #000;padding-top:2px}.small{font-size:11px}")
-            append("</style></head><body>")
-            append("<div class='center'><b>${escapeHtml(appNameLabel)}</b></div>")
-            if (currentNote?.invoiceNumber?.isNotBlank() == true) {
-                append("<div class='right line'><b>${escapeHtml(invoiceNumberLabel)}:</b> ${escapeHtml(currentNote?.invoiceNumber.orEmpty())}</div>")
-            }
-            if (currentNote?.customerName?.isNotBlank() == true) {
-                append("<div class='right line'><b>${escapeHtml(customerNameLabel)}:</b> ${escapeHtml(currentNote?.customerName.orEmpty())}</div>")
-            }
-            append("<div class='right line small'><b>التاريخ:</b> ${escapeHtml(java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(currentNote?.timestamp ?: System.currentTimeMillis())))}</div>")
-            append("<div class='items'>")
+            append("<!DOCTYPE html><html dir='rtl' lang='ar'><head><meta charset='UTF-8'>")
+            append("<meta name='viewport' content='width=384, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>")
+            append("<style>")
+            append("@page { size: 58mm auto; margin: 0 !important; padding: 0 !important; }")
+            append("@media print {")
+            append("  html, body { width: 58mm !important; max-width: 58mm !important; margin: 0 !important; padding: 0 !important; }")
+            append("}")
+            append("* { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }")
+            append("html, body { width: 100%; max-width: 58mm; background: #fff !important; color: #000 !important; font-family: sans-serif; direction: rtl; text-align: right; }")
+            append(".receipt { width: 100%; max-width: 58mm; padding: 2px 3px 0 3px; margin: 0; }")
+            append(".center { text-align: center; }")
+            append(".store-title { font-size: 16px; font-weight: 900; margin-bottom: 2px; }")
+            append(".meta-box { font-size: 11px; font-weight: bold; line-height: 1.3; margin: 2px 0; }")
+            append(".meta-row { display: flex; justify-content: space-between; }")
+            append(".thick-divider { border-top: 1.5px solid #000; margin: 3px 0; }")
+            append(".dashed-divider { border-top: 1px dashed #000; margin: 3px 0; }")
+            append("table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 2px 0; }")
+            append("th { font-size: 11px; font-weight: 900; padding: 3px 1px; border-bottom: 1.5px solid #000; text-align: center; }")
+            append("td { font-size: 12px; font-weight: bold; padding: 3px 1px; border-bottom: 1px dotted #000; word-break: break-word; line-height: 1.2; }")
+            append(".c-name  { width: 44%; text-align: right; }")
+            append(".c-qty   { width: 16%; text-align: center; }")
+            append(".c-price { width: 18%; text-align: center; }")
+            append(".c-total { width: 22%; text-align: left; font-weight: 900; }")
+            append(".grand-total-box { display: flex; justify-content: space-between; font-size: 16px; font-weight: 900; margin-top: 3px; padding-top: 3px; border-top: 2px solid #000; }")
+            append(".footer { text-align: center; font-size: 10px; font-weight: bold; margin-top: 3px; }")
+            append("</style></head><body><div class='receipt'>")
+            append("<div class='center store-title'>${escapeHtml(appNameLabel)}</div>")
+            append("<div class='meta-box'>")
+            append("<div class='meta-row'><span><b>${escapeHtml(invoiceNumberLabel)}:</b> ${escapeHtml(invNum)}</span><span>${escapeHtml(dateFormatted)}</span></div>")
+            append("<div><b>${escapeHtml(customerNameLabel)}:</b> ${escapeHtml(custName)}</div>")
+            append("</div>")
+            append("<div class='thick-divider'></div>")
+            append("<table><thead><tr>")
+            append("<th class='c-name'>${escapeHtml(itemNameLabel)}</th>")
+            append("<th class='c-qty'>${escapeHtml(quantityLabel)}</th>")
+            append("<th class='c-price'>${escapeHtml(priceLabel)}</th>")
+            append("<th class='c-total'>${escapeHtml(totalLabel)}</th>")
+            append("</tr></thead><tbody>")
             currentItems.forEach { item ->
                 val total = item.quantity * item.price
-                append("<div class='item'>")
-                append("<div class='name'>${escapeHtml(item.name)}</div>")
-                append("<div class='qty'>${formatNumber(item.quantity)}</div>")
-                append("<div class='total'>${formatNumber(total)}</div>")
-                append("</div>")
+                append("<tr>")
+                append("<td class='c-name'>${escapeHtml(item.name)}</td>")
+                append("<td class='c-qty'>${formatNumber(item.quantity)}</td>")
+                append("<td class='c-price'>${formatNumber(item.price)}</td>")
+                append("<td class='c-total'>${formatNumber(total)}</td>")
+                append("</tr>")
             }
-            append("</div>")
-            append("<div class='grand right'>${escapeHtml(totalLabel)}: ${formatNumber(grandTotal)}</div>")
-            append("</body></html>")
+            append("</tbody></table>")
+            append("<div class='grand-total-box'><span>${escapeHtml(totalLabel)}:</span><span>${formatNumber(grandTotal)}</span></div>")
+            append("<div class='dashed-divider'></div>")
+            append("<div class='footer'>شكراً لتعاملكم معنا</div>")
+            append("</div></body></html>")
         }
+
         val webView = android.webkit.WebView(context)
-        webView.settings.defaultTextEncodingName = "UTF-8"
+        webView.settings.apply {
+            defaultTextEncodingName = "UTF-8"
+            useWideViewPort = false
+            loadWithOverviewMode = false
+            textZoom = 100
+        }
         webView.webViewClient = object : android.webkit.WebViewClient() {
             override fun onPageFinished(view: android.webkit.WebView, url: String) {
                 val printManager = context.getSystemService(android.content.Context.PRINT_SERVICE) as android.print.PrintManager
-                printManager.print("Invoice", view.createPrintDocumentAdapter("Invoice"), null)
+                val calculatedHeightMm = (42 + currentItems.size * 7 + 28).coerceAtLeast(65)
+                val heightMils = (calculatedHeightMm * 39.3701).toInt()
+                val printAttributes = android.print.PrintAttributes.Builder()
+                    .setMediaSize(android.print.PrintAttributes.MediaSize("ISO_58MM_ROLL", "58mm Roll", 2283, heightMils))
+                    .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
+                    .setColorMode(android.print.PrintAttributes.COLOR_MODE_MONOCHROME)
+                    .setResolution(android.print.PrintAttributes.Resolution("thermal_pos_203", "203 DPI", 203, 203))
+                    .build()
+                val printJobName = "فاتورة_${invNum}"
+                printManager.print(printJobName, view.createPrintDocumentAdapter(printJobName), printAttributes)
             }
         }
         webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
@@ -148,7 +192,12 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
                         Text("${stringResource(R.string.font_size)} ${currentNote?.fontSize ?: 14}")
                         IconButton(onClick = { viewModel.updateNoteSettings((currentNote?.fontSize ?: 14) + 1, currentNote?.scrollEnabled ?: true) }) { Icon(Icons.Default.Add, null) }
                     }
-                    Text("${stringResource(R.string.total)}: ${formatNumber(currentItems.sumOf { it.quantity * it.price })}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.shareCurrentInvoice() }) {
+                            Icon(Icons.Default.Share, contentDescription = "مشاركة الفاتورة / بلوتوث", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        Text("${stringResource(R.string.total)}: ${formatNumber(currentItems.sumOf { it.quantity * it.price })}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
+                    }
                 }
             }
         }

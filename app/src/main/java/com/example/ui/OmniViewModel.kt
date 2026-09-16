@@ -56,15 +56,30 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
 
     fun updateCustomerName(name: String) {
         val note = currentNote.value ?: return
-        viewModelScope.launch { repository.saveNote(note.copy(customerName = name)) }
+        viewModelScope.launch {
+            val updated = note.copy(customerName = name)
+            repository.saveNote(updated)
+            repository.saveInvoiceFile(updated, currentItems.value)
+        }
     }
 
     fun updateInvoiceNumber(number: String) {
         val note = currentNote.value ?: return
-        viewModelScope.launch { repository.saveNote(note.copy(invoiceNumber = number)) }
+        viewModelScope.launch {
+            val updated = note.copy(invoiceNumber = number)
+            repository.saveNote(updated)
+            repository.saveInvoiceFile(updated, currentItems.value)
+        }
     }
 
-    fun deleteItem(item: NoteItem) { viewModelScope.launch { repository.deleteItem(item) } }
+    fun deleteItem(item: NoteItem) {
+        viewModelScope.launch {
+            repository.deleteItem(item)
+            repository.allNotes.first().find { it.id == item.noteId }?.let { note ->
+                repository.saveInvoiceFile(note, repository.getItemsForNote(item.noteId).first())
+            }
+        }
+    }
 
     fun updateItem(item: NoteItem) {
         viewModelScope.launch {
@@ -75,7 +90,16 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
         }
     }
 
-    fun clearCurrentNote() { _currentNoteId.value?.let { id -> viewModelScope.launch { repository.clearNote(id) } } }
+    fun clearCurrentNote() {
+        _currentNoteId.value?.let { id ->
+            viewModelScope.launch {
+                repository.clearNote(id)
+                currentNote.value?.let { note ->
+                    repository.saveInvoiceFile(note, emptyList())
+                }
+            }
+        }
+    }
 
     fun updateNoteSettings(fontSize: Int, scrollEnabled: Boolean) {
         val note = currentNote.value ?: return
@@ -97,5 +121,10 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
     suspend fun saveCurrentInvoiceFile(): Boolean {
         val note = currentNote.value ?: return false
         return repository.saveInvoiceFile(note, currentItems.value)
+    }
+
+    fun shareCurrentInvoice() {
+        val note = currentNote.value ?: return
+        repository.shareInvoiceReceipt(note, currentItems.value)
     }
 }

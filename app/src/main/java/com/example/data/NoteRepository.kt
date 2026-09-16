@@ -68,20 +68,82 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
         val total = items.sumOf { it.quantity * it.price }
         val date = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault())
             .format(java.util.Date(note.timestamp))
+        val invNum = note.invoiceNumber.trim().ifEmpty { note.id.toString() }
+        val customer = note.customerName.trim().ifEmpty { "عميل عام" }
+
         val text = buildString {
-            append("${note.title}\n")
-            if (note.invoiceNumber.isNotBlank()) append("رقم الفاتورة: ${note.invoiceNumber}\n")
-            if (note.customerName.isNotBlank()) append("العميل: ${note.customerName}\n")
-            append("التاريخ: $date\n")
-            append("------------------------------\n")
-            items.forEach { item ->
-                append("${item.name}\n")
-                append("الكمية: ${item.quantity}  الإجمالي: ${formatMoney(item.quantity * item.price)}\n")
+            appendLine("================================")
+            appendLine("         ${note.title.ifEmpty { "فاتورة مبيعات" }}")
+            appendLine("================================")
+            appendLine("رقم الفاتورة: $invNum")
+            appendLine("العميل     : $customer")
+            appendLine("التاريخ    : $date")
+            appendLine("--------------------------------")
+            appendLine(String.format(java.util.Locale.US, "%-14s %4s %5s %6s", "الصنف", "الكمية", "السعر", "الإجمالي"))
+            appendLine("--------------------------------")
+            for (item in items) {
+                val itemTotal = item.quantity * item.price
+                val nameShort = if (item.name.length > 14) item.name.take(13) + "." else item.name
+                appendLine(
+                    String.format(
+                        java.util.Locale.US,
+                        "%-14s %4s %5s %6s",
+                        nameShort,
+                        formatMoney(item.quantity),
+                        formatMoney(item.price),
+                        formatMoney(itemTotal)
+                    )
+                )
             }
-            append("------------------------------\n")
-            append("الإجمالي: ${formatMoney(total)}\n")
+            appendLine("--------------------------------")
+            appendLine("المجموع الكلي: ${formatMoney(total)}")
+            appendLine("عدد الأصناف  : ${items.size}")
+            appendLine("================================")
+            appendLine("       شكراً لتعاملكم معنا      ")
+            appendLine("================================")
         }
-        return BackupManager(context).saveTextFile("New-Tamim-invoices/Invoices", BackupManager(context).invoiceFileName(note), text)
+        return BackupManager(context).saveOrUpdateInvoiceFile("New-Tamim-invoices/Invoices", note, text)
+    }
+
+    fun shareInvoiceReceipt(note: Note, items: List<NoteItem>) {
+        val total = items.sumOf { it.quantity * it.price }
+        val date = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(note.timestamp))
+        val invNum = note.invoiceNumber.trim().ifEmpty { note.id.toString() }
+        val customer = note.customerName.trim().ifEmpty { "عميل عام" }
+        val title = "فاتورة_${invNum}_${customer}"
+        val text = buildString {
+            appendLine("================================")
+            appendLine("         ${note.title.ifEmpty { "فاتورة مبيعات" }}")
+            appendLine("================================")
+            appendLine("رقم الفاتورة: $invNum")
+            appendLine("العميل     : $customer")
+            appendLine("التاريخ    : $date")
+            appendLine("--------------------------------")
+            appendLine(String.format(java.util.Locale.US, "%-14s %4s %5s %6s", "الصنف", "الكمية", "السعر", "الإجمالي"))
+            appendLine("--------------------------------")
+            for (item in items) {
+                val itemTotal = item.quantity * item.price
+                val nameShort = if (item.name.length > 14) item.name.take(13) + "." else item.name
+                appendLine(
+                    String.format(
+                        java.util.Locale.US,
+                        "%-14s %4s %5s %6s",
+                        nameShort,
+                        formatMoney(item.quantity),
+                        formatMoney(item.price),
+                        formatMoney(itemTotal)
+                    )
+                )
+            }
+            appendLine("--------------------------------")
+            appendLine("المجموع الكلي: ${formatMoney(total)}")
+            appendLine("عدد الأصناف  : ${items.size}")
+            appendLine("================================")
+            appendLine("       شكراً لتعاملكم معنا      ")
+            appendLine("================================")
+        }
+        BackupManager(context).shareReceipt(title, text)
     }
 
     private fun formatMoney(value: Double): String =
