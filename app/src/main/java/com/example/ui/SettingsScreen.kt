@@ -1,7 +1,6 @@
 package com.example.ui
 
-import android.content.Intent
-import.net.Uri
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
