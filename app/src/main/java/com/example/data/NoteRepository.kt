@@ -20,8 +20,20 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
 
     suspend fun saveItem(item: NoteItem) {
         noteDao.insertItem(item)
-        // Extract words for suggestions
-        item.name.split(" ").forEach { word ->
+
+        // Keep the existing word-by-word suggestions, but also save the
+        // complete item phrase. This makes multi-word suggestions work too.
+        val normalizedPhrase = item.name.trim().replace(Regex("\\s+"), " ")
+        if (normalizedPhrase.length > 1) {
+            val existingPhrase = noteDao.getSuggestionByWord(normalizedPhrase)
+            if (existingPhrase != null) {
+                noteDao.insertSuggestion(existingPhrase.copy(count = existingPhrase.count + 1))
+            } else {
+                noteDao.insertSuggestion(Suggestion(word = normalizedPhrase))
+            }
+        }
+
+        normalizedPhrase.split(" ").forEach { word ->
             if (word.length > 1) {
                 val existing = noteDao.getSuggestionByWord(word)
                 if (existing != null) {
@@ -36,7 +48,6 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
     suspend fun deleteItem(item: NoteItem) = noteDao.deleteItem(item)
     suspend fun clearNote(noteId: Long) = noteDao.clearItemsForNote(noteId)
 
-    // DataStore for persistence
     private val LAST_NOTE_ID = longPreferencesKey("last_note_id")
     val lastNoteId: Flow<Long?> = context.dataStore.data.map { it[LAST_NOTE_ID] }
     suspend fun setLastNoteId(id: Long) {
