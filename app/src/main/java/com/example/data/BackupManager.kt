@@ -25,9 +25,10 @@ class BackupManager(private val context: Context) {
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
     fun createBackup(notes: List<Note>, items: List<NoteItem>, suggestions: List<Suggestion>, lastNoteId: Long?): String =
-        json.encodeToString(AppBackup(notes = notes, items = items, suggestions = suggestions, lastNoteId = lastNoteId))
+        json.encodeToString(AppBackup.serializer(), AppBackup(notes = notes, items = items, suggestions = suggestions, lastNoteId = lastNoteId))
 
-    fun parseBackup(text: String): AppBackup = json.decodeFromString(text)
+    fun parseBackup(text: String): AppBackup =
+        json.decodeFromString(AppBackup.serializer(), text)
 
     fun saveTextFile(relativeFolder: String, displayName: String, text: String): Boolean {
         return try {
@@ -43,7 +44,9 @@ class BackupManager(private val context: Context) {
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return false
             resolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                values.clear(); values.put(MediaStore.Downloads.IS_PENDING, 0); resolver.update(uri, values, null, null)
+                values.clear()
+                values.put(MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
             }
             true
         } catch (_: Exception) { false }
