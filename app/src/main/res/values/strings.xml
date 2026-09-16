@@ -25,5 +25,10 @@
     <string name="edit_item">تعديل الصنف</string>
     <string name="exit_confirm_title">تأكيد الخروج</string>
     <string name="exit_confirm_msg">هل أنت متأكد أنك تريد إغلاق التطبيق؟</string>
+    <string name="save_to_file">حفظ بالملفات</string>
+    <string name="share_receipt">مشاركة / بلوتوث</string>
+    <string name="invoice_saved_success">تم حفظ الفاتورة في مجلد التنزيلات/New-Tamim-invoices/Invoices</string>
+    <string name="invoice_save_failed">تعذر حفظ الفاتورة في الملفات</string>
+    <string name="no_items_warning">أضف أصنافاً أولاً للطباعة أو الحفظ</string>
     <string name="confirm">نعم</string>
 </resources>
