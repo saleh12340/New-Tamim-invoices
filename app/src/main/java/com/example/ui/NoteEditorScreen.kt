@@ -82,39 +82,47 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
     val totalLabel = stringResource(R.string.total)
     val invoiceNumberLabel = stringResource(R.string.invoice_number)
 
+    fun escapeHtml(value: String): String = value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+
     fun printNote() {
+        val grandTotal = currentItems.sumOf { it.quantity * it.price }
         val html = buildString {
-            append("<html><body style='font-family: Arial; direction: rtl; padding: 20px;'>")
-            append("<h2 style='text-align: center; margin-bottom: 5px;'>$appNameLabel</h2>")
+            append("<html><head><meta charset='UTF-8'><style>")
+            append("@page{margin:0;size:auto;}html,body{margin:0;padding:0;width:100%;}")
+            append("body{font-family:sans-serif;direction:rtl;font-size:12px;line-height:1.15;color:#000;padding:2px 3px;box-sizing:border-box;}")
+            append(".center{text-align:center}.right{text-align:right}.line{margin:1px 0;padding:0}.items{margin-top:3px}")
+            append(".item{display:flex;direction:rtl;width:100%;margin:0;padding:0;border-bottom:1px dashed #777;line-height:1.15;}")
+            append(".name{flex:1;text-align:right;word-break:break-word}.qty{width:38px;text-align:center}.total{width:58px;text-align:left;font-weight:bold}")
+            append(".grand{font-weight:bold;font-size:14px;margin-top:2px;border-top:1px solid #000;padding-top:2px}.small{font-size:11px}")
+            append("</style></head><body>")
+            append("<div class='center'><b>${escapeHtml(appNameLabel)}</b></div>")
             if (currentNote?.invoiceNumber?.isNotBlank() == true) {
-                append("<p style='text-align: right; margin-top: 0;'><b>$invoiceNumberLabel:</b> ${currentNote?.invoiceNumber}</p>")
+                append("<div class='right line'><b>${escapeHtml(invoiceNumberLabel)}:</b> ${escapeHtml(currentNote?.invoiceNumber.orEmpty())}</div>")
             }
-            append("<p style='text-align: right; margin-top: 0;'><b>$customerNameLabel:</b> ${currentNote?.customerName ?: ""}</p>")
-            append("<p style='text-align: right; margin-top: 0;'><b>التاريخ:</b> ${java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(currentNote?.timestamp ?: System.currentTimeMillis()))}</p>")
-            append("<table style='width: 100%; border-collapse: collapse; margin-top: 10px;'>")
-            append("<tr style='background-color: #f2f2f2;'>")
-            append("<th style='border: 1px solid black; padding: 8px;'>$itemNameLabel</th>")
-            append("<th style='border: 1px solid black; padding: 8px;'>$quantityLabel</th>")
-            append("<th style='border: 1px solid black; padding: 8px;'>$priceLabel</th>")
-            append("<th style='border: 1px solid black; padding: 8px;'>$totalLabel</th>")
-            append("</tr>")
-            var grandTotal = 0.0
+            if (currentNote?.customerName?.isNotBlank() == true) {
+                append("<div class='right line'><b>${escapeHtml(customerNameLabel)}:</b> ${escapeHtml(currentNote?.customerName.orEmpty())}</div>")
+            }
+            append("<div class='right line small'><b>التاريخ:</b> ${escapeHtml(java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(currentNote?.timestamp ?: System.currentTimeMillis())))}</div>")
+            append("<div class='items'>")
             currentItems.forEach { item ->
                 val total = item.quantity * item.price
-                grandTotal += total
-                append("<tr>")
-                append("<td style='border: 1px solid black; padding: 8px; text-align: right;'>${item.name}</td>")
-                append("<td style='border: 1px solid black; padding: 8px; text-align: center;'>${formatNumber(item.quantity)}</td>")
-                append("<td style='border: 1px solid black; padding: 8px; text-align: center;'>${formatNumber(item.price)}</td>")
-                append("<td style='border: 1px solid black; padding: 8px; text-align: center;'>${formatNumber(total)}</td>")
-                append("</tr>")
+                append("<div class='item'>")
+                append("<div class='name'>${escapeHtml(item.name)}</div>")
+                append("<div class='qty'>${formatNumber(item.quantity)}</div>")
+                append("<div class='total'>${formatNumber(total)}</div>")
+                append("</div>")
             }
-            append("<tr style='font-weight: bold; background-color: #f2f2f2;'>")
-            append("<td colspan='3' style='border: 1px solid black; padding: 8px; text-align: left;'>$totalLabel</td>")
-            append("<td style='border: 1px solid black; padding: 8px; text-align: center;'>${formatNumber(grandTotal)}</td>")
-            append("</tr></table></body></html>")
+            append("</div>")
+            append("<div class='grand right'>${escapeHtml(totalLabel)}: ${formatNumber(grandTotal)}</div>")
+            append("</body></html>")
         }
         val webView = android.webkit.WebView(context)
+        webView.settings.defaultTextEncodingName = "UTF-8"
         webView.webViewClient = object : android.webkit.WebViewClient() {
             override fun onPageFinished(view: android.webkit.WebView, url: String) {
                 val printManager = context.getSystemService(android.content.Context.PRINT_SERVICE) as android.print.PrintManager
@@ -170,8 +178,6 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
                             singleLine = true
                         )
                     }
-
-                    // Same order as requested: total -> quantity -> details.
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedTextField(
                             value = totalInput,
@@ -214,7 +220,6 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
                             }
                         }
                     }
-
                     Button(
                         onClick = {
                             val q = quantity.text.toDoubleOrNull() ?: 0.0
@@ -235,8 +240,7 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
                     }
                 }
             }
-
-            val fontSize = minOf((currentNote?.fontSize ?: 14).sp, 12.sp)
+            val fontSize = ((currentNote?.fontSize ?: 14).coerceAtMost(12)).sp
             Column(Modifier.fillMaxSize().padding(horizontal = 4.dp)) {
                 Row(Modifier.fillMaxWidth().background(Color.Gray.copy(alpha = 0.1f)).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(itemNameLabel, Modifier.weight(0.35f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 11.sp)
@@ -279,7 +283,6 @@ fun NoteItemRow(item: NoteItem, fontSize: TextUnit, modifier: Modifier, onUpdate
             title = { Text(stringResource(R.string.edit_item)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    // Edit order deliberately matches invoice entry: total -> quantity -> details.
                     OutlinedTextField(
                         value = editTotal,
                         onValueChange = { editTotal = it; updateEditPriceFromTotal(it.text, editQty.text) },
@@ -330,7 +333,6 @@ fun NoteItemRow(item: NoteItem, fontSize: TextUnit, modifier: Modifier, onUpdate
     }
 
     Row(modifier.padding(vertical = 3.dp).clickable {
-        // Reload the current values whenever editing starts, so the dialog is always ready with the latest data.
         editName = TextFieldValue(item.name)
         editQty = TextFieldValue(if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else item.quantity.toString())
         editTotal = TextFieldValue(formatEdit(item.quantity * item.price))
@@ -340,7 +342,7 @@ fun NoteItemRow(item: NoteItem, fontSize: TextUnit, modifier: Modifier, onUpdate
         CompactCell(item.name, Modifier.weight(0.35f), fontSize, TextAlign.Start)
         CompactCell(formatEdit(item.quantity), Modifier.weight(0.15f), fontSize, TextAlign.Center)
         CompactCell(formatEdit(item.price), Modifier.weight(0.20f), fontSize, TextAlign.Center)
-        CompactCell(formatEdit(item.quantity * item.price), Modifier.weight(0.20f), minOf(fontSize, 12.sp), TextAlign.Center, FontWeight.Bold)
+        CompactCell(formatEdit(item.quantity * item.price), Modifier.weight(0.20f), fontSize, TextAlign.Center, FontWeight.Bold)
         IconButton(onClick = { onDelete(item) }, modifier = Modifier.size(42.dp)) {
             Icon(Icons.Default.Delete, null, tint = Color.Red.copy(alpha = 0.7f), modifier = Modifier.size(19.dp))
         }
@@ -353,7 +355,7 @@ private fun CompactCell(text: String, modifier: Modifier, fontSize: TextUnit, al
         Text(
             text = text,
             modifier = Modifier.fillMaxWidth(),
-            fontSize = minOf(fontSize, 12.sp),
+            fontSize = fontSize,
             fontWeight = weight,
             textAlign = align,
             maxLines = 3,
