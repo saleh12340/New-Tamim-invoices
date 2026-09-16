@@ -195,20 +195,16 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = invoiceNumber,
-                            onValueChange = { 
-                                invoiceNumber = it
-                                viewModel.updateInvoiceNumber(it.text)
-                            },
-                            label = { Text(stringResource(R.string.invoice_number)) },
-                            modifier = Modifier.weight(1f),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White
-                            )
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp), 
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${stringResource(R.string.invoice_number)}: ${invoiceNumber.text}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.background(Color.LightGray.copy(alpha = 0.3f), MaterialTheme.shapes.small).padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                         OutlinedTextField(
                             value = customerName,
@@ -216,24 +212,48 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
                                 customerName = it
                                 viewModel.updateCustomerName(it.text)
                             },
-                            label = { Text(stringResource(R.string.customer_name)) },
-                            modifier = Modifier.weight(1.5f),
+                            placeholder = { Text(stringResource(R.string.customer_name), fontSize = 12.sp) },
+                            modifier = Modifier.weight(1f).height(48.dp),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            ),
+                            singleLine = true
+                        )
+                    }
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedTextField(
+                            value = totalInput,
+                            onValueChange = { 
+                                totalInput = it
+                                updatePriceFromTotal(it.text, quantity.text)
+                            },
+                            label = { Text(stringResource(R.string.total), fontSize = 10.sp) },
+                            modifier = Modifier.weight(0.25f).onFocusChanged { 
+                                if (it.isFocused) {
+                                    scope.launch {
+                                        delay(100)
+                                        totalInput = totalInput.copy(selection = TextRange(0, totalInput.text.length))
+                                    }
+                                }
+                            },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White
                             )
                         )
-                    }
-
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = quantity,
                             onValueChange = { 
                                 quantity = it
                                 updateTotalFromPrice(price.text, it.text)
                             },
-                            label = { Text(stringResource(R.string.quantity)) },
+                            label = { Text(stringResource(R.string.quantity), fontSize = 10.sp) },
                             modifier = Modifier.weight(0.2f).onFocusChanged { 
                                 if (it.isFocused) {
                                     scope.launch {
@@ -249,58 +269,14 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
                                 unfocusedContainerColor = Color.White
                             )
                         )
-                        OutlinedTextField(
-                            value = price,
-                            onValueChange = { 
-                                price = it
-                                updateTotalFromPrice(it.text, quantity.text)
-                            },
-                            label = { Text(stringResource(R.string.price)) },
-                            modifier = Modifier.weight(0.2f).onFocusChanged { 
-                                if (it.isFocused) {
-                                    scope.launch {
-                                        delay(100)
-                                        price = price.copy(selection = TextRange(0, price.text.length))
-                                    }
-                                }
-                            },
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White
-                            )
-                        )
-                        OutlinedTextField(
-                            value = totalInput,
-                            onValueChange = { 
-                                totalInput = it
-                                updatePriceFromTotal(it.text, quantity.text)
-                            },
-                            label = { Text(stringResource(R.string.total)) },
-                            modifier = Modifier.weight(0.2f).onFocusChanged { 
-                                if (it.isFocused) {
-                                    scope.launch {
-                                        delay(100)
-                                        totalInput = totalInput.copy(selection = TextRange(0, totalInput.text.length))
-                                    }
-                                }
-                            },
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White
-                            )
-                        )
-                        Box(Modifier.weight(0.4f)) {
+                        Box(Modifier.weight(0.55f)) {
                             OutlinedTextField(
                                 value = itemName,
                                 onValueChange = { 
                                     itemName = it
                                     showSuggestions = it.text.isNotEmpty()
                                 },
-                                label = { Text(stringResource(R.string.item_name)) },
+                                label = { Text(stringResource(R.string.item_name), fontSize = 10.sp) },
                                 modifier = Modifier.fillMaxWidth().onFocusChanged {
                                     if (it.isFocused) {
                                         scope.launch {
@@ -358,20 +334,35 @@ fun NoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit) {
                 }
             }
             
-            // List Area
+            // List Area (Table Layout)
             val fontSize = (currentNote?.fontSize ?: 14).sp
             val items = currentItems
 
-            LazyColumn(Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
-                itemsIndexed(items) { index, item ->
-                    NoteItemRow(
-                        item, 
-                        fontSize, 
-                        Modifier.fillMaxWidth(),
-                        onUpdate = { viewModel.updateItem(it) },
-                        onDelete = { viewModel.deleteItem(it) }
-                    )
-                    HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
+            Column(Modifier.fillMaxSize().padding(horizontal = 4.dp)) {
+                // Table Header
+                Row(
+                    Modifier.fillMaxWidth().background(Color.Gray.copy(alpha = 0.1f)).padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(itemNameLabel, Modifier.weight(0.35f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(quantityLabel, Modifier.weight(0.15f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(priceLabel, Modifier.weight(0.2f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(totalLabel, Modifier.weight(0.2f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Spacer(Modifier.width(48.dp)) // space for delete button
+                }
+                HorizontalDivider()
+
+                LazyColumn(Modifier.weight(1f)) {
+                    itemsIndexed(items) { index, item ->
+                        NoteItemRow(
+                            item, 
+                            fontSize, 
+                            Modifier.fillMaxWidth(),
+                            onUpdate = { viewModel.updateItem(it) },
+                            onDelete = { viewModel.deleteItem(it) }
+                        )
+                        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                    }
                 }
             }
         }
@@ -501,28 +492,37 @@ fun NoteItemRow(
     }
 
     Row(
-        modifier.padding(vertical = 4.dp)
-            .clickable { isEditing = true },
+        modifier.padding(vertical = 4.dp).clickable { isEditing = true },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = item.name,
-                fontSize = fontSize,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.End,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Text(
-                    text = "${item.quantity} x ${item.price} = ${item.quantity * item.price}",
-                    fontSize = (fontSize.value * 0.8).sp,
-                    color = Color.Gray
-                )
-            }
-        }
-        IconButton(onClick = { onDelete(item) }) {
-            Icon(Icons.Default.Delete, null, tint = Color.Red)
+        Text(
+            text = item.name,
+            modifier = Modifier.weight(0.35f).padding(horizontal = 4.dp),
+            fontSize = fontSize,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+        Text(
+            text = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else item.quantity.toString(),
+            modifier = Modifier.weight(0.15f),
+            textAlign = TextAlign.Center,
+            fontSize = fontSize
+        )
+        Text(
+            text = if (item.price % 1.0 == 0.0) item.price.toInt().toString() else "%.2f".format(java.util.Locale.US, item.price),
+            modifier = Modifier.weight(0.2f),
+            textAlign = TextAlign.Center,
+            fontSize = fontSize
+        )
+        Text(
+            text = if ((item.quantity * item.price) % 1.0 == 0.0) (item.quantity * item.price).toInt().toString() else "%.2f".format(java.util.Locale.US, item.quantity * item.price),
+            modifier = Modifier.weight(0.2f),
+            textAlign = TextAlign.Center,
+            fontSize = fontSize,
+            fontWeight = FontWeight.Bold
+        )
+        IconButton(onClick = { onDelete(item) }, modifier = Modifier.size(48.dp)) {
+            Icon(Icons.Default.Delete, null, tint = Color.Red.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
         }
     }
 }

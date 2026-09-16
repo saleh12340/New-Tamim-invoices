@@ -53,7 +53,12 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
 
     fun createNewNote() {
         viewModelScope.launch {
-            val id = repository.saveNote(Note(title = "فاتورة جديدة"))
+            val notes = repository.allNotes.first()
+            val nextNumber = if (notes.isEmpty()) "1" else {
+                val maxNum = notes.mapNotNull { it.invoiceNumber.toIntOrNull() }.maxOrNull() ?: 0
+                (maxNum + 1).toString()
+            }
+            val id = repository.saveNote(Note(title = "فاتورة $nextNumber", invoiceNumber = nextNumber))
             selectNote(id)
         }
     }
