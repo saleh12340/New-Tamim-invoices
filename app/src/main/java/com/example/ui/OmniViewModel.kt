@@ -35,6 +35,7 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
     fun deleteCustomerPayment(payment: CustomerPayment) { viewModelScope.launch { repository.deletePayment(payment) } }
     fun paymentsForCustomer(customerName: String): Flow<List<CustomerPayment>> = repository.paymentsForCustomer(customerName)
     fun itemsForInvoice(noteId: Long): Flow<List<NoteItem>> = repository.getItemsForNote(noteId)
+    fun invoiceTotal(noteId: Long): Flow<Double> = repository.invoiceTotal(noteId)
     fun shareCustomerStatement(customerName: String) { viewModelScope.launch { repository.shareCustomerStatement(customerName) } }
     suspend fun createBackupJson(): String = repository.createFullBackup()
     suspend fun restoreBackupJson(text: String): Long? { val restoredId = repository.restoreFullBackup(text); val restoredNotes = repository.allNotes.first(); val selectedId = restoredId?.takeIf { id -> restoredNotes.any { it.id == id } } ?: restoredNotes.firstOrNull()?.id; if (selectedId != null) selectNote(selectedId) else createNewNote(); return selectedId }
