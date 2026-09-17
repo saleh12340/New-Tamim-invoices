@@ -24,6 +24,8 @@ interface NoteDao {
 
     @Query("SELECT * FROM note_items WHERE noteId = :noteId ORDER BY timestamp ASC")
     fun getItemsForNote(noteId: Long): Flow<List<NoteItem>>
+    @Query("SELECT COALESCE(SUM(quantity * price), 0.0) FROM note_items WHERE noteId = :noteId")
+    fun getInvoiceTotal(noteId: Long): Flow<Double>
     @Query("SELECT * FROM note_items")
     suspend fun getAllItemsSnapshot(): List<NoteItem>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
