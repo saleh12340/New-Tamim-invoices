@@ -6,14 +6,10 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,7 +24,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "notes_db_v2").addMigrations(AppDatabase.MIGRATION_1_2).build()
+        val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "notes_db")
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .build()
         val repository = NoteRepository(db.noteDao(), applicationContext)
         val factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -40,9 +38,17 @@ class MainActivity : ComponentActivity() {
             AppTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     var showExitDialog by remember { mutableStateOf(false) }
-                    if (showExitDialog) AlertDialog(onDismissRequest={showExitDialog=false},title={Text(stringResource(R.string.exit_confirm_title))},text={Text(stringResource(R.string.exit_confirm_msg))},confirmButton={TextButton(onClick={finish()}){Text(stringResource(R.string.confirm))}},dismissButton={TextButton(onClick={showExitDialog=false}){Text(stringResource(R.string.cancel))}})
-                    BackHandler { showExitDialog=true }
-                    val viewModel: OmniViewModel = viewModel(factory=factory)
+                    if (showExitDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showExitDialog = false },
+                            title = { Text(stringResource(R.string.exit_confirm_title)) },
+                            text = { Text(stringResource(R.string.exit_confirm_msg)) },
+                            confirmButton = { TextButton(onClick = { finish() }) { Text(stringResource(R.string.confirm)) } },
+                            dismissButton = { TextButton(onClick = { showExitDialog = false }) { Text(stringResource(R.string.cancel)) } }
+                        )
+                    }
+                    BackHandler { showExitDialog = true }
+                    val viewModel: OmniViewModel = viewModel(factory = factory)
                     AppNavigation(viewModel)
                 }
             }
@@ -52,20 +58,18 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation(viewModel: OmniViewModel) {
-    val navController=rememberNavController()
-    val backStack by navController.currentBackStackEntryAsState()
-    val currentRoute=backStack?.destination?.route
-    Box(Modifier.fillMaxSize()) {
-        NavHost(navController,startDestination="editor",modifier=Modifier.fillMaxSize()) {
-            composable("editor") { FinalNoteEditorScreen(viewModel,onOpenHistory={navController.navigate("history")},onOpenCustomers={navController.navigate("customers")}) }
-            composable("history") { HistoryScreen(viewModel,onBack={navController.popBackStack()}) }
-            composable("customers") { CustomerAccountsScreen(viewModel,onBack={navController.popBackStack()}) }
-            composable("smart") { SmartDashboardScreen(viewModel,onBack={navController.popBackStack()},onOpenHistory={navController.navigate("history")}) }
-            composable("settings") { SettingsScreen(viewModel,onBack={navController.popBackStack()}) }
+    val navController = rememberNavController()
+    NavHost(navController = navController, startDestination = "editor", modifier = Modifier.fillMaxSize()) {
+        composable("editor") {
+            FinalNoteEditorScreen(
+                viewModel = viewModel,
+                onOpenHistory = { navController.navigate("history") },
+                onOpenCustomers = { navController.navigate("customers") }
+            )
         }
-        if(currentRoute=="editor") Row(Modifier.align(Alignment.BottomEnd).padding(end=16.dp,bottom=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            SmallFloatingActionButton(onClick={navController.navigate("customers")},containerColor=MaterialTheme.colorScheme.tertiaryContainer){Icon(Icons.Default.People,"حسابات العملاء")}
-            SmallFloatingActionButton(onClick={navController.navigate("settings")},containerColor=MaterialTheme.colorScheme.primaryContainer){Icon(Icons.Default.Settings,"الإعدادات")}
-        }
+        composable("history") { HistoryScreen(viewModel, onBack = { navController.popBackStack() }) }
+        composable("customers") { CustomerAccountsScreen(viewModel, onBack = { navController.popBackStack() }) }
+        composable("smart") { SmartDashboardScreen(viewModel, onBack = { navController.popBackStack() }, onOpenHistory = { navController.navigate("history") }) }
+        composable("settings") { SettingsScreen(viewModel, onBack = { navController.popBackStack() }) }
     }
 }
