@@ -23,6 +23,13 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
 
     val allNotes: StateFlow<List<Note>> = repository.allNotes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val suggestions: StateFlow<List<Suggestion>> = repository.suggestions.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allPayments: StateFlow<List<CustomerPayment>> = repository.allPayments.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val customerNames: StateFlow<List<String>> = allNotes.map { notes ->
+        notes.map { it.customerName.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .sortedWith(String.CASE_INSENSITIVE_ORDER)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -48,16 +55,15 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
         val noteId = _currentNoteId.value ?: return
         viewModelScope.launch {
             repository.saveItem(NoteItem(noteId = noteId, name = name, quantity = quantity, price = price, section = section))
-            repository.allNotes.first().find { it.id == noteId }?.let { note ->
-                repository.saveInvoiceFile(note, repository.getItemsForNote(noteId).first())
-            }
+            repository.allNotes.first().find { it.id == noteId }?.let { note -> repository.saveInvoiceFile(note, repository.getItemsForNote(noteId).first()) }
         }
     }
 
     fun updateCustomerName(name: String) {
         val note = currentNote.value ?: return
         viewModelScope.launch {
-            val updated = note.copy(customerName = name)
+            val normalized = name.trim().replace(Regex("\\s+"), " ")
+            val updated = note.copy(customerName = normalized)
             repository.saveNote(updated)
             repository.saveInvoiceFile(updated, currentItems.value)
         }
@@ -75,18 +81,14 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
     fun deleteItem(item: NoteItem) {
         viewModelScope.launch {
             repository.deleteItem(item)
-            repository.allNotes.first().find { it.id == item.noteId }?.let { note ->
-                repository.saveInvoiceFile(note, repository.getItemsForNote(item.noteId).first())
-            }
+            repository.allNotes.first().find { it.id == item.noteId }?.let { note -> repository.saveInvoiceFile(note, repository.getItemsForNote(item.noteId).first()) }
         }
     }
 
     fun updateItem(item: NoteItem) {
         viewModelScope.launch {
             repository.saveItem(item)
-            repository.allNotes.first().find { it.id == item.noteId }?.let { note ->
-                repository.saveInvoiceFile(note, repository.getItemsForNote(item.noteId).first())
-            }
+            repository.allNotes.first().find { it.id == item.noteId }?.let { note -> repository.saveInvoiceFile(note, repository.getItemsForNote(item.noteId).first()) }
         }
     }
 
@@ -94,16 +96,14 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
         _currentNoteId.value?.let { id ->
             viewModelScope.launch {
                 repository.clearNote(id)
-                currentNote.value?.let { note ->
-                    repository.saveInvoiceFile(note, emptyList())
-                }
+                currentNote.value?.let { note -> repository.saveInvoiceFile(note, emptyList()) }
             }
         }
     }
 
     fun updateNoteSettings(fontSize: Int, scrollEnabled: Boolean) {
         val note = currentNote.value ?: return
-        viewModelScope.launch { repository.saveNote(note.copy(fontSize = fontSize.coerceIn(8, 32), scrollEnabled = scrollEnabled)) }
+        viewModelScope.launch { repository.saveNote(note.copy(fontSize = fontSize.coerceIn(10, 14), scrollEnabled = scrollEnabled)) }
     }
 
     fun deleteNote(note: Note) {
@@ -116,13 +116,23 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
         }
     }
 
+    fun addCustomerPayment(customerName: String, amount: Double, details: String) {
+        val name = customerName.trim().replace(Regex("\\s+"), " ")
+        if (name.isBlank() || amount <= 0.0) return
+        viewModelScope.launch { repository.savePayment(CustomerPayment(customerName = name, amount = amount, details = details.ifBlank { "دفعة" })) }
+    }
+
+    fun deleteCustomerPayment(payment: CustomerPayment) { viewModelScope.launch { repository.deletePayment(payment) } }
+
+    fun paymentsForCustomer(customerName: String): Flow<List<CustomerPayment>> = repository.paymentsForCustomer(customerName)
+    fun itemsForInvoice(noteId: Long): Flow<List<NoteItem>> = repository.getItemsForNote(noteId)
+
     suspend fun createBackupJson(): String = repository.createFullBackup()
 
     suspend fun restoreBackupJson(text: String): Long? {
         val restoredId = repository.restoreFullBackup(text)
         val restoredNotes = repository.allNotes.first()
-        val selectedId = restoredId?.takeIf { id -> restoredNotes.any { it.id == id } }
-            ?: restoredNotes.firstOrNull()?.id
+        val selectedId = restoredId?.takeIf { id -> restoredNotes.any { it.id == id } } ?: restoredNotes.firstOrNull()?.id
         if (selectedId != null) selectNote(selectedId) else createNewNote()
         return selectedId
     }
