@@ -117,7 +117,16 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
     }
 
     suspend fun createBackupJson(): String = repository.createFullBackup()
-    suspend fun restoreBackupJson(text: String): Long? = repository.restoreFullBackup(text)
+
+    suspend fun restoreBackupJson(text: String): Long? {
+        val restoredId = repository.restoreFullBackup(text)
+        val restoredNotes = repository.allNotes.first()
+        val selectedId = restoredId?.takeIf { id -> restoredNotes.any { it.id == id } }
+            ?: restoredNotes.firstOrNull()?.id
+        if (selectedId != null) selectNote(selectedId) else createNewNote()
+        return selectedId
+    }
+
     suspend fun saveCurrentInvoiceFile(): Boolean {
         val note = currentNote.value ?: return false
         return repository.saveInvoiceFile(note, currentItems.value)
