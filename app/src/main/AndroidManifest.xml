@@ -14,7 +14,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.App">
         <activity
-            android:name="com.example.MainActivityV2"
+            android:name="com.example.MainActivityStable"
             android:exported="true"
             android:theme="@style/Theme.App"
             android:windowSoftInputMode="adjustResize">
