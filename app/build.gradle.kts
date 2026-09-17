@@ -11,11 +11,12 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.aistudio.salesinvoice.vbwrtz"
+        // مستقل عن النسخة الأصلية: يسمح بتثبيت النسختين معًا.
+        applicationId = "com.aistudio.salesinvoice.independent"
         minSdk = 24
         targetSdk = 35
-        versionCode = 200
-        versionName = "2.0"
+        versionCode = 201
+        versionName = "2.1-independent"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
