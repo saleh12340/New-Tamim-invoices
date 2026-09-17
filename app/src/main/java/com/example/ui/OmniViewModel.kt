@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
     private val _currentNoteId = MutableStateFlow<Long?>(null)
     val currentNoteId: StateFlow<Long?> = _currentNoteId.asStateFlow()
+    private var customerUpdateJob: Job? = null
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val currentNote: StateFlow<Note?> = _currentNoteId.flatMapLatest { id -> if (id == null) flowOf(null) else repository.allNotes.map { notes -> notes.find { it.id == id } } }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -24,7 +27,17 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
     fun selectNote(id: Long) { _currentNoteId.value = id; viewModelScope.launch { repository.setLastNoteId(id) } }
     fun createNewNote() { viewModelScope.launch { val notes = repository.allNotes.first(); val nextNumber = if (notes.isEmpty()) "1" else ((notes.mapNotNull { it.invoiceNumber.toIntOrNull() }.maxOrNull() ?: 0) + 1).toString(); selectNote(repository.saveNote(Note(title = "فاتورة $nextNumber", invoiceNumber = nextNumber))) } }
     fun addItem(name: String, quantity: Double, price: Double, section: String) { val id = _currentNoteId.value ?: return; viewModelScope.launch { repository.saveItem(NoteItem(noteId = id, name = name, quantity = quantity, price = price, section = section)); repository.allNotes.first().find { it.id == id }?.let { repository.saveInvoiceFile(it, repository.getItemsForNote(id).first()) } } }
-    fun updateCustomerName(name: String) { val note = currentNote.value ?: return; viewModelScope.launch { val updated = note.copy(customerName = name.trim().replace(Regex("\\s+"), " ")); repository.saveNote(updated); repository.saveInvoiceFile(updated, currentItems.value) } }
+    fun updateCustomerName(name: String) {
+        val note = currentNote.value ?: return
+        customerUpdateJob?.cancel()
+        customerUpdateJob = viewModelScope.launch {
+            delay(180)
+            val normalized = name.trim().replace(Regex("\\s+"), " ")
+            val updated = note.copy(customerName = normalized)
+            repository.saveNote(updated)
+            repository.saveInvoiceFile(updated, currentItems.value)
+        }
+    }
     fun updateInvoiceNumber(number: String) { val note = currentNote.value ?: return; viewModelScope.launch { val updated = note.copy(invoiceNumber = number); repository.saveNote(updated); repository.saveInvoiceFile(updated, currentItems.value) } }
     fun deleteItem(item: NoteItem) { viewModelScope.launch { repository.deleteItem(item); repository.allNotes.first().find { it.id == item.noteId }?.let { repository.saveInvoiceFile(it, repository.getItemsForNote(item.noteId).first()) } } }
     fun updateItem(item: NoteItem) { viewModelScope.launch { repository.saveItem(item); repository.allNotes.first().find { it.id == item.noteId }?.let { repository.saveInvoiceFile(it, repository.getItemsForNote(item.noteId).first()) } } }
@@ -37,6 +50,18 @@ class OmniViewModel(private val repository: NoteRepository) : ViewModel() {
     fun itemsForInvoice(noteId: Long): Flow<List<NoteItem>> = repository.getItemsForNote(noteId)
     fun invoiceTotal(noteId: Long): Flow<Double> = repository.invoiceTotal(noteId)
     fun shareCustomerStatement(customerName: String) { viewModelScope.launch { repository.shareCustomerStatement(customerName) } }
+    suspend fun customerBalanceSnapshot(customerName: String, excludeInvoiceId: Long? = null): Double {
+        val name = customerName.trim()
+        if (name.isBlank()) return 0.0
+        val notes = repository.allNotes.first().filter { it.customerName.trim().equals(name, true) && it.id != excludeInvoiceId }
+        val invoiceTotal = notes.sumOf { invoiceTotal(it.id).first() }
+        val paid = repository.paymentsForCustomer(name).first().sumOf { it.amount }
+        return invoiceTotal - paid
+    }
+    suspend fun customerInvoiceTotalSnapshot(customerName: String): Double {
+        val name = customerName.trim()
+        return repository.allNotes.first().filter { it.customerName.trim().equals(name, true) }.sumOf { invoiceTotal(it.id).first() }
+    }
     suspend fun createBackupJson(): String = repository.createFullBackup()
     suspend fun restoreBackupJson(text: String): Long? { val restoredId = repository.restoreFullBackup(text); val restoredNotes = repository.allNotes.first(); val selectedId = restoredId?.takeIf { id -> restoredNotes.any { it.id == id } } ?: restoredNotes.firstOrNull()?.id; if (selectedId != null) selectNote(selectedId) else createNewNote(); return selectedId }
     suspend fun saveCurrentInvoiceFile(): Boolean { val note = currentNote.value ?: return false; return repository.saveInvoiceFile(note, currentItems.value) }
