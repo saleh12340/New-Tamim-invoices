@@ -15,15 +15,14 @@ env:
 
 jobs:
   build:
-    name: Build Android APK v2 Final
+    name: Build Android APK - Single Final Version
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -31,6 +30,9 @@ jobs:
 
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x gradlew
+
+      - name: Clean previous build outputs
+        run: ./gradlew clean
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
@@ -45,18 +47,18 @@ jobs:
           ls -lh app/build/outputs/apk/debug/app-debug.apk
           ls -lh app/build/outputs/apk/release/app-release-unsigned.apk
 
-      - name: Upload v2 Debug APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: tamim-invoices-v2-debug-final
+          name: tamim-invoices-single-final-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload v2 Release APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: tamim-invoices-v2-release-unsigned-final
+          name: tamim-invoices-single-final-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 30
