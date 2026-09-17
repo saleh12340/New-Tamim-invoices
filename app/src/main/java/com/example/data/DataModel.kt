@@ -35,3 +35,13 @@ data class Suggestion(
     val word: String,
     val count: Int = 1
 )
+
+@Entity(tableName = "customer_payments")
+@Serializable
+data class CustomerPayment(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val customerName: String,
+    val amount: Double,
+    val details: String = "دفعة",
+    val timestamp: Long = System.currentTimeMillis()
+)

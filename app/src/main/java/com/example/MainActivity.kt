@@ -5,24 +5,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.room.Room
 import com.example.data.AppDatabase
 import com.example.data.NoteRepository
@@ -33,9 +24,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "notes_db")
-            .fallbackToDestructiveMigration()
+            .addMigrations(AppDatabase.MIGRATION_1_2)
             .build()
         val repository = NoteRepository(db.noteDao(), applicationContext)
         val factory = object : ViewModelProvider.Factory {
@@ -44,10 +34,9 @@ class MainActivity : ComponentActivity() {
                 return OmniViewModel(repository) as T
             }
         }
-
         setContent {
             AppTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     var showExitDialog by remember { mutableStateOf(false) }
                     if (showExitDialog) {
                         AlertDialog(
@@ -70,30 +59,17 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation(viewModel: OmniViewModel) {
     val navController = rememberNavController()
-    val backStack by navController.currentBackStackEntryAsState()
-    val currentRoute = backStack?.destination?.route
-
-    Box(Modifier.fillMaxSize()) {
-        NavHost(navController = navController, startDestination = "editor", modifier = Modifier.fillMaxSize()) {
-            composable("editor") {
-                NoteEditorScreen(viewModel, onOpenHistory = { navController.navigate("history") })
-            }
-            composable("history") {
-                HistoryScreen(viewModel, onBack = { navController.popBackStack() })
-            }
-            composable("settings") {
-                SettingsScreen(viewModel, onBack = { navController.popBackStack() })
-            }
+    NavHost(navController = navController, startDestination = "editor", modifier = Modifier.fillMaxSize()) {
+        composable("editor") {
+            FinalNoteEditorScreen(
+                viewModel = viewModel,
+                onOpenHistory = { navController.navigate("history") },
+                onOpenCustomers = { navController.navigate("customers") }
+            )
         }
-
-        if (currentRoute == "editor") {
-            SmallFloatingActionButton(
-                onClick = { navController.navigate("settings") },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = "الإعدادات")
-            }
-        }
+        composable("history") { HistoryScreen(viewModel, onBack = { navController.popBackStack() }) }
+        composable("customers") { CustomerAccountsScreen(viewModel, onBack = { navController.popBackStack() }) }
+        composable("smart") { SmartDashboardScreen(viewModel, onBack = { navController.popBackStack() }, onOpenHistory = { navController.navigate("history") }) }
+        composable("settings") { SettingsScreen(viewModel, onBack = { navController.popBackStack() }) }
     }
 }
