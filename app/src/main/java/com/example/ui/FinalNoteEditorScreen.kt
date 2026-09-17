@@ -20,11 +20,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -111,56 +111,32 @@ fun FinalNoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit, o
                     val event = awaitPointerEvent()
                     if (event.changes.all { !it.pressed }) break
                     val elapsed = event.changes.first().uptimeMillis - start
-                    if (elapsed >= 450) {
-                        long = true
-                        changeFont(delta)
-                        delay(120)
-                    }
+                    if (elapsed >= 450) { long = true; changeFont(delta); delay(120) }
                 }
                 if (!long) changeFont(delta)
             }
         }, contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null) }
     }
 
-    Scaffold(topBar = {
+    Scaffold(topBar={
         Column(Modifier.background(MaterialTheme.colorScheme.primaryContainer).statusBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                SmallTopAppBarButton("مسح") { viewModel.clearCurrentNote() }
-                SmallTopAppBarButton("فاتورة جديدة") { viewModel.createNewNote() }
-                SmallTopAppBarButton("السجل") { onOpenHistory() }
-                SmallTopAppBarButton("طباعة") { printInvoice() }
-                SmallTopAppBarButton("حذف") { deleteConfirm = true }
-            }
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Row(verticalAlignment = Alignment.CenterVertically) { fontButton(Icons.Default.Remove, -1); Text("حجم الخط ${note?.fontSize ?: 14}", fontWeight = FontWeight.Bold); fontButton(Icons.Default.Add, 1) }
-                Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = { viewModel.shareCurrentInvoice() }) { Icon(Icons.Default.Share, "مشاركة") }; Text("الإجمالي: ${money(items.sumOf { it.quantity*it.price })}", fontWeight = FontWeight.Bold) }
-            }
+            Row(Modifier.fillMaxWidth().padding(6.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)){SmallTopAppBarButton("مسح"){viewModel.clearCurrentNote()};SmallTopAppBarButton("فاتورة جديدة"){viewModel.createNewNote()};SmallTopAppBarButton("السجل"){onOpenHistory()};SmallTopAppBarButton("طباعة"){printInvoice()};SmallTopAppBarButton("حذف"){deleteConfirm=true}}
+            Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){Row(verticalAlignment=Alignment.CenterVertically){fontButton(Icons.Default.Remove,-1);Text("حجم الخط ${note?.fontSize?:14}",fontWeight=FontWeight.Bold);fontButton(Icons.Default.Add,1)};Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick={viewModel.shareCurrentInvoice()}){Icon(Icons.Default.Share,"مشاركة")};Text("الإجمالي: ${money(items.sumOf{it.quantity*it.price})}",fontWeight=FontWeight.Bold)}}
         }
-    }) { pad ->
-        if (deleteConfirm) AlertDialog(onDismissRequest={deleteConfirm=false}, title={Text("حذف الفاتورة")}, text={Text("هل تريد حذف الفاتورة الحالية؟")}, confirmButton={TextButton(onClick={note?.let{viewModel.deleteNote(it)};deleteConfirm=false}){Text("حذف")}}, dismissButton={TextButton(onClick={deleteConfirm=false}){Text("إلغاء")}})
-        Column(Modifier.padding(pad).fillMaxSize()) {
-            Card(Modifier.fillMaxWidth().padding(7.dp), elevation=CardDefaults.cardElevation(3.dp)) {
-                Column(Modifier.padding(9.dp), verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Box {
-                        OutlinedTextField(value=customer,onValueChange={customer=it;showCustomers=clean(it.text).isNotEmpty()},label={Text("اسم العميل")},singleLine=true,modifier=Modifier.fillMaxWidth().onFocusChanged{if(it.isFocused)selectAll(customer){customer=it}},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Next),textStyle=TextStyle(fontSize=13.sp),shape=RoundedCornerShape(8.dp))
-                        val cq=clean(customer.text)
-                        val cm=if(cq.isEmpty()) emptyList() else customerNames.filter{clean(it).contains(cq,true)}.take(7)
-                        if(showCustomers && cm.isNotEmpty()) Card(Modifier.fillMaxWidth().padding(top=58.dp)){Column{cm.forEach{c->Text(c,Modifier.fillMaxWidth().clickable{customer=TextFieldValue(c,TextRange(c.length));showCustomers=false;viewModel.updateCustomerName(c)}.padding(11.dp))}}}
-                    }
-                    LaunchedEffect(customer.text,note?.id) { delay(220); if(note!=null && customer.text != note?.customerName) viewModel.updateCustomerName(customer.text) }
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-                        OutlinedTextField(value=total,onValueChange={total=it},label={Text("الإجمالي")},singleLine=true,modifier=Modifier.weight(1.15f).onFocusChanged{if(it.isFocused)selectAll(total){total=it}},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Next),textStyle=TextStyle(fontSize=15.sp,fontWeight=FontWeight.Bold),shape=RoundedCornerShape(8.dp))
-                        OutlinedTextField(value=qty,onValueChange={qty=it},label={Text("الكمية")},singleLine=true,modifier=Modifier.weight(.8f).onFocusChanged{if(it.isFocused)selectAll(qty){qty=it}},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Next),textStyle=TextStyle(fontSize=13.sp),shape=RoundedCornerShape(8.dp))
-                        Box(Modifier.weight(1.7f)) {
-                            OutlinedTextField(value=itemName,onValueChange={itemName=it;showItems=clean(it.text).isNotEmpty()},label={Text("اسم الصنف")},singleLine=true,modifier=Modifier.fillMaxWidth().onFocusChanged{if(it.isFocused)selectAll(itemName){itemName=it}},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),textStyle=TextStyle(fontSize=13.sp),shape=RoundedCornerShape(8.dp))
-                            val q=clean(itemName.text); val ms=if(q.isEmpty()) emptyList() else suggestions.filter{clean(it.word).contains(q,true)}.take(8)
-                            if(showItems && ms.isNotEmpty()) Card(Modifier.fillMaxWidth().padding(top=58.dp)){Column{ms.forEach{s->Text(s.word,Modifier.fillMaxWidth().clickable{itemName=TextFieldValue(s.word,TextRange(s.word.length));showItems=false}.padding(10.dp))}}}
-                        }
-                    }
-                    Text("سعر الوحدة المحسوب: ${money(unitPrice())}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick={val q=qty.text.toDoubleOrNull()?:0.0;val t=total.text.toDoubleOrNull()?:0.0;if(itemName.text.isNotBlank()&&q>0){viewModel.addItem(clean(itemName.text),q,t/q,"left");itemName=TextFieldValue("");qty=TextFieldValue("1");total=TextFieldValue("0");showItems=false}},Modifier.fillMaxWidth(),shape=RoundedCornerShape(8.dp)){Icon(Icons.Default.Add,null);Spacer(Modifier.width(5.dp));Text("إضافة الصنف")}
+    }){pad->
+        if(deleteConfirm)AlertDialog(onDismissRequest={deleteConfirm=false},title={Text("حذف الفاتورة")},text={Text("هل تريد حذف الفاتورة الحالية؟")},confirmButton={TextButton(onClick={note?.let{viewModel.deleteNote(it)};deleteConfirm=false}){Text("حذف")}},dismissButton={TextButton(onClick={deleteConfirm=false}){Text("إلغاء")}})
+        Column(Modifier.padding(pad).fillMaxSize()){
+            Card(Modifier.fillMaxWidth().padding(7.dp),elevation=CardDefaults.cardElevation(3.dp)){Column(Modifier.padding(9.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+                Box{OutlinedTextField(value=customer,onValueChange={customer=it;showCustomers=clean(it.text).isNotEmpty()},label={Text("اسم العميل")},singleLine=true,modifier=Modifier.fillMaxWidth().onFocusChanged{if(it.isFocused)selectAll(customer){customer=it}},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Next),textStyle=TextStyle(fontSize=13.sp),shape=RoundedCornerShape(8.dp));val cq=clean(customer.text);val cm=if(cq.isEmpty())emptyList()else customerNames.filter{clean(it).contains(cq,true)}.take(7);if(showCustomers&&cm.isNotEmpty())Card(Modifier.fillMaxWidth().padding(top=58.dp)){Column{cm.forEach{c->Text(c,Modifier.fillMaxWidth().clickable{customer=TextFieldValue(c,TextRange(c.length));showCustomers=false;viewModel.updateCustomerName(c)}.padding(11.dp))}}}}
+                LaunchedEffect(customer.text,note?.id){delay(220);if(note!=null&&customer.text!=note?.customerName)viewModel.updateCustomerName(customer.text)}
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                    OutlinedTextField(value=total,onValueChange={total=it},label={Text("الإجمالي")},singleLine=true,modifier=Modifier.weight(1.15f).onFocusChanged{if(it.isFocused)selectAll(total){total=it}},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Next),textStyle=TextStyle(fontSize=15.sp,fontWeight=FontWeight.Bold),shape=RoundedCornerShape(8.dp))
+                    OutlinedTextField(value=qty,onValueChange={qty=it},label={Text("الكمية")},singleLine=true,modifier=Modifier.weight(.8f).onFocusChanged{if(it.isFocused)selectAll(qty){qty=it}},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Next),textStyle=TextStyle(fontSize=13.sp),shape=RoundedCornerShape(8.dp))
+                    Box(Modifier.weight(1.7f)){OutlinedTextField(value=itemName,onValueChange={itemName=it;showItems=clean(it.text).isNotEmpty()},label={Text("اسم الصنف")},singleLine=true,modifier=Modifier.fillMaxWidth().onFocusChanged{if(it.isFocused)selectAll(itemName){itemName=it}},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),textStyle=TextStyle(fontSize=13.sp),shape=RoundedCornerShape(8.dp));val q=clean(itemName.text);val ms=if(q.isEmpty())emptyList()else suggestions.filter{clean(it.word).contains(q,true)}.take(8);if(showItems&&ms.isNotEmpty())Card(Modifier.fillMaxWidth().padding(top=58.dp)){Column{ms.forEach{s->Text(s.word,Modifier.fillMaxWidth().clickable{itemName=TextFieldValue(s.word,TextRange(s.word.length));showItems=false}.padding(10.dp))}}}}
                 }
-            }
+                Text("سعر الوحدة المحسوب: ${money(unitPrice())}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick={val q=qty.text.toDoubleOrNull()?:0.0;val t=total.text.toDoubleOrNull()?:0.0;if(itemName.text.isNotBlank()&&q>0){viewModel.addItem(clean(itemName.text),q,t/q,"left");itemName=TextFieldValue("");qty=TextFieldValue("1");total=TextFieldValue("0");showItems=false}},Modifier.fillMaxWidth(),shape=RoundedCornerShape(8.dp)){Icon(Icons.Default.Add,null);Spacer(Modifier.width(5.dp));Text("إضافة الصنف")}
+            }}
             Row(Modifier.fillMaxWidth().background(Color.Gray.copy(alpha=.1f)).padding(6.dp),verticalAlignment=Alignment.CenterVertically){CellHeader("الصنف",.36f);CellHeader("الكمية",.14f);CellHeader("سعر الوحدة",.20f);CellHeader("الإجمالي",.20f);Spacer(Modifier.width(42.dp))}
             HorizontalDivider()
             LazyColumn(Modifier.fillMaxSize()){itemsIndexed(items){_,it->FinalItemRow(it,note?.fontSize?:14,{viewModel.updateItem(it)},{viewModel.deleteItem(it)});HorizontalDivider(color=Color.LightGray.copy(alpha=.5f))}}
@@ -168,7 +144,7 @@ fun FinalNoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit, o
     }
 }
 
-@Composable private fun SmallTopAppBarButton(text:String,onClick:()->Unit){Surface(onClick=onClick,color=MaterialTheme.colorScheme.primary,shape=RoundedCornerShape(6.dp),modifier=Modifier.height(34.dp)){Box(Modifier.padding(horizontal=7.dp),contentAlignment=Alignment.Center){Text(text,color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)}}}
+@Composable private fun SmallTopAppBarButton(text:String,onClick:()->Unit)=Surface(onClick=onClick,color=MaterialTheme.colorScheme.primary,shape=RoundedCornerShape(6.dp),modifier=Modifier.height(34.dp)){Box(Modifier.padding(horizontal=7.dp),contentAlignment=Alignment.Center){Text(text,color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)}}
 @Composable private fun RowScope.CellHeader(text:String,w:Float){Text(text,Modifier.weight(w),textAlign=TextAlign.Center,fontSize=10.sp,fontWeight=FontWeight.Bold)}
 @Composable private fun FinalItemRow(item:NoteItem,font:Int,onUpdate:(NoteItem)->Unit,onDelete:(NoteItem)->Unit){Row(Modifier.fillMaxWidth().clickable{onUpdate(item)},verticalAlignment=Alignment.CenterVertically){Text(item.name,Modifier.weight(.36f).padding(4.dp),fontSize=font.coerceAtMost(14).sp,maxLines=2);Text(fmt(item.quantity),Modifier.weight(.14f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp);Text(fmt(item.price),Modifier.weight(.20f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp);Text(fmt(item.quantity*item.price),Modifier.weight(.20f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp,fontWeight=FontWeight.Bold);IconButton(onClick={onDelete(item)},modifier=Modifier.size(42.dp)){Icon(Icons.Default.Delete,null,tint=Color.Red)}}}
 private fun fmt(v:Double)=if(v.isFinite()&&v%1.0==0.0)v.toLong().toString() else "%.2f".format(Locale.US,v)
