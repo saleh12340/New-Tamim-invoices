@@ -65,7 +65,6 @@ fun AppNavigation(viewModel: OmniViewModel) {
         }
         if(currentRoute=="editor") Row(Modifier.align(Alignment.BottomEnd).padding(end=16.dp,bottom=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             SmallFloatingActionButton(onClick={navController.navigate("customers")},containerColor=MaterialTheme.colorScheme.tertiaryContainer){Icon(Icons.Default.People,"حسابات العملاء")}
-            SmallFloatingActionButton(onClick={navController.navigate("smart")},containerColor=MaterialTheme.colorScheme.secondaryContainer){Icon(Icons.Default.Dashboard,stringResource(R.string.smart_dashboard))}
             SmallFloatingActionButton(onClick={navController.navigate("settings")},containerColor=MaterialTheme.colorScheme.primaryContainer){Icon(Icons.Default.Settings,"الإعدادات")}
         }
     }
