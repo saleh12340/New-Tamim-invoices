@@ -62,9 +62,7 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
     val lastNoteId: Flow<Long?> = context.dataStore.data.map { it[LAST_NOTE_ID] }
     suspend fun setLastNoteId(id: Long) { context.dataStore.edit { it[LAST_NOTE_ID] = id } }
 
-    suspend fun createFullBackup(): String = BackupManager(context).createBackup(
-        noteDao.getAllNotesSnapshot(), noteDao.getAllItemsSnapshot(), noteDao.getAllSuggestionsSnapshot(), noteDao.getAllPaymentsSnapshot(), lastNoteId.first()
-    )
+    suspend fun createFullBackup(): String = BackupManager(context).createBackup(noteDao.getAllNotesSnapshot(), noteDao.getAllItemsSnapshot(), noteDao.getAllSuggestionsSnapshot(), noteDao.getAllPaymentsSnapshot(), lastNoteId.first())
 
     suspend fun restoreFullBackup(text: String): Long? {
         val backup = BackupManager(context).parseBackup(text)
@@ -77,15 +75,15 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
         return backup.lastNoteId
     }
 
-    suspend fun saveInvoiceFile(note: Note, items: List<NoteItem>): Boolean =
-        BackupManager(context).saveOrUpdateInvoiceFile("New-Tamim-invoices/Invoices", note, receiptText(note, items))
+    suspend fun saveInvoiceFile(note: Note, items: List<NoteItem>): Boolean = BackupManager(context).saveOrUpdateInvoiceFile("New-Tamim-invoices/Invoices", note, receiptText(note, items))
 
-    fun shareInvoiceReceipt(note: Note, items: List<NoteItem>) {
+    suspend fun shareInvoiceReceipt(note: Note, items: List<NoteItem>) {
         val total = items.sumOf { it.quantity * it.price }
-        val text = receiptText(note, items)
+        val customerBalance = customerBalance(note.customerName, note.id) + total
+        val text = receiptText(note, items, customerBalance)
         val title = "فاتورة_${note.invoiceNumber.ifBlank { note.id.toString() }}_${note.customerName.ifBlank { "عميل" }}"
         try {
-            val imageFile = createReceiptImage(note, items, total)
+            val imageFile = createReceiptImage(note, items, total, customerBalance)
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", imageFile)
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"; putExtra(Intent.EXTRA_SUBJECT, title); putExtra(Intent.EXTRA_TEXT, text); putExtra(Intent.EXTRA_STREAM, uri)
@@ -96,6 +94,15 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
         } catch (_: Exception) { BackupManager(context).shareReceipt(title, text) }
     }
 
+    private suspend fun customerBalance(customerName: String, excludeInvoiceId: Long? = null): Double {
+        val name = customerName.trim()
+        if (name.isBlank()) return 0.0
+        val notes = allNotes.first().filter { it.customerName.trim().equals(name, true) && it.id != excludeInvoiceId }
+        val invoices = notes.sumOf { invoiceTotal(it.id).first() }
+        val paid = paymentsForCustomer(name).first().sumOf { it.amount }
+        return invoices - paid
+    }
+
     suspend fun shareCustomerStatement(customerName: String) {
         val notes = allNotes.first().filter { it.customerName.trim().equals(customerName.trim(), true) }.sortedByDescending { it.timestamp }
         val payments = paymentsForCustomer(customerName).first()
@@ -104,11 +111,7 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
             appendLine("العميل: $customerName")
             appendLine("==============================")
             var totalInvoices = 0.0
-            notes.forEach { note ->
-                val total = invoiceTotal(note.id).first()
-                totalInvoices += total
-                appendLine("فاتورة ${note.invoiceNumber.ifBlank { note.id.toString() }} | ${dateTime(note.timestamp)} | ${formatMoney(total)}")
-            }
+            notes.forEach { note -> val total = invoiceTotal(note.id).first(); totalInvoices += total; appendLine("فاتورة ${note.invoiceNumber.ifBlank { note.id.toString() }} | ${dateTime(note.timestamp)} | ${formatMoney(total)}") }
             val totalPaid = payments.sumOf { it.amount }
             appendLine("------------------------------")
             appendLine("إجمالي الفواتير: ${formatMoney(totalInvoices)}")
@@ -119,20 +122,22 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
         context.startActivity(Intent.createChooser(intent, "مشاركة كشف الحساب").apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
     }
 
-    private fun receiptText(note: Note, items: List<NoteItem>): String {
+    private suspend fun receiptText(note: Note, items: List<NoteItem>, balanceAfter: Double? = null): String {
         val total = items.sumOf { it.quantity * it.price }
         val invNum = note.invoiceNumber.trim().ifEmpty { note.id.toString() }
         val customer = note.customerName.trim().ifEmpty { "عميل عام" }
         return buildString {
             appendLine("فاتورة مبيعات"); appendLine("رقم الفاتورة: $invNum"); appendLine("العميل: $customer"); appendLine("التاريخ: ${dateTime(note.timestamp)}"); appendLine("------------------------------")
             items.forEach { item -> appendLine("${item.name} × ${formatMoney(item.quantity)} = ${formatMoney(item.quantity * item.price)}") }
-            appendLine("------------------------------"); appendLine("الإجمالي: ${formatMoney(total)}"); appendLine("شكراً لتعاملكم معنا")
+            appendLine("------------------------------"); appendLine("الإجمالي: ${formatMoney(total)}")
+            if (balanceAfter != null && note.customerName.isNotBlank()) appendLine("رصيد العميل بعد الفاتورة: ${formatMoney(balanceAfter)} ${if (balanceAfter > 0.005) "عليه" else if (balanceAfter < -0.005) "له" else "متساوٍ"}")
+            appendLine("شكراً لتعاملكم معنا")
         }
     }
 
-    private fun createReceiptImage(note: Note, items: List<NoteItem>, total: Double): File {
+    private fun createReceiptImage(note: Note, items: List<NoteItem>, total: Double, balanceAfter: Double? = null): File {
         val width = 720
-        val text = receiptText(note, items)
+        val text = "${receiptTextSync(note, items)}${if (balanceAfter != null && note.customerName.isNotBlank()) "\nرصيد العميل بعد الفاتورة: ${formatMoney(balanceAfter)} ${if (balanceAfter > 0.005) "عليه" else if (balanceAfter < -0.005) "له" else "متساوٍ"}" else ""}"
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; textSize = 30f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
         val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, width - 48).setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(true).build()
         val bitmap = Bitmap.createBitmap(width, layout.height + 80, Bitmap.Config.ARGB_8888)
@@ -143,6 +148,11 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
         val file = File(dir, "receipt_${note.id}_${System.currentTimeMillis()}.png")
         FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         return file
+    }
+
+    private fun receiptTextSync(note: Note, items: List<NoteItem>): String {
+        val total = items.sumOf { it.quantity * it.price }
+        return buildString { appendLine("فاتورة مبيعات"); appendLine("رقم الفاتورة: ${note.invoiceNumber.ifBlank { note.id.toString() }}"); appendLine("العميل: ${note.customerName.ifBlank { "عميل عام" }}"); appendLine("التاريخ: ${dateTime(note.timestamp)}"); appendLine("------------------------------"); items.forEach { appendLine("${it.name} × ${formatMoney(it.quantity)} = ${formatMoney(it.quantity * it.price)}") }; appendLine("------------------------------"); appendLine("الإجمالي: ${formatMoney(total)}") }
     }
 
     private fun dateTime(time: Long): String = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(time))
