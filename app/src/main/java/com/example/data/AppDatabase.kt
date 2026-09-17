@@ -49,9 +49,32 @@ interface NoteDao {
     suspend fun deleteAllSuggestions()
     @Query("SELECT * FROM suggestions WHERE word = :word")
     suspend fun getSuggestionByWord(word: String): Suggestion?
+
+    @Query("SELECT * FROM customer_payments ORDER BY timestamp DESC")
+    fun getAllPayments(): Flow<List<CustomerPayment>>
+    @Query("SELECT * FROM customer_payments WHERE customerName = :customerName ORDER BY timestamp DESC")
+    fun getPaymentsForCustomer(customerName: String): Flow<List<CustomerPayment>>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPayment(payment: CustomerPayment): Long
+    @Delete
+    suspend fun deletePayment(payment: CustomerPayment)
+    @Query("DELETE FROM customer_payments")
+    suspend fun deleteAllPayments()
+    @Query("SELECT * FROM customer_payments")
+    suspend fun getAllPaymentsSnapshot(): List<CustomerPayment>
 }
 
-@Database(entities = [Note::class, NoteItem::class, Suggestion::class], version = 1, exportSchema = false)
+@Database(entities = [Note::class, NoteItem::class, Suggestion::class, CustomerPayment::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
+
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS customer_payments (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, customerName TEXT NOT NULL, amount REAL NOT NULL, details TEXT NOT NULL, timestamp INTEGER NOT NULL)"
+                )
+            }
+        }
+    }
 }
