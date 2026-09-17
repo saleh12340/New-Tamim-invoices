@@ -99,22 +99,7 @@ fun FinalNoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit, o
 
     fun changeFont(delta: Int) = viewModel.updateNoteSettings((note?.fontSize ?: 14) + delta, note?.scrollEnabled ?: true)
     @Composable fun fontButton(icon: androidx.compose.ui.graphics.vector.ImageVector, delta: Int) {
-        Box(
-            Modifier
-                .size(42.dp)
-                .combinedClickable(
-                    onClick = { changeFont(delta) },
-                    onLongClick = {
-                        scope.launch {
-                            repeat(20) {
-                                changeFont(delta)
-                                delay(120)
-                            }
-                        }
-                    }
-                ),
-            contentAlignment = Alignment.Center
-        ) { Icon(icon, contentDescription = null) }
+        Box(Modifier.size(42.dp).combinedClickable(onClick={changeFont(delta)},onLongClick={scope.launch { repeat(20) { changeFont(delta); delay(120) } }}),contentAlignment=Alignment.Center) { Icon(icon, contentDescription = null) }
     }
 
     Scaffold(topBar={
@@ -147,3 +132,5 @@ fun FinalNoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit, o
 @Composable private fun RowScope.CellHeader(text:String,w:Float){Text(text,Modifier.weight(w),textAlign=TextAlign.Center,fontSize=10.sp,fontWeight=FontWeight.Bold)}
 @Composable private fun FinalItemRow(item:NoteItem,font:Int,onUpdate:(NoteItem)->Unit,onDelete:(NoteItem)->Unit){Row(Modifier.fillMaxWidth().clickable{onUpdate(item)},verticalAlignment=Alignment.CenterVertically){Text(item.name,Modifier.weight(.36f).padding(4.dp),fontSize=font.coerceAtMost(14).sp,maxLines=2);Text(fmt(item.quantity),Modifier.weight(.14f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp);Text(fmt(item.price),Modifier.weight(.20f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp);Text(fmt(item.quantity*item.price),Modifier.weight(.20f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp,fontWeight=FontWeight.Bold);IconButton(onClick={onDelete(item)},modifier=Modifier.size(42.dp)){Icon(Icons.Default.Delete,null,tint=Color.Red)}}}
 private fun fmt(v:Double)=if(v.isFinite()&&v%1.0==0.0)v.toLong().toString() else "%.2f".format(Locale.US,v)
+
+// V2 final editor: stable text-field focus and safe long-press font controls.
