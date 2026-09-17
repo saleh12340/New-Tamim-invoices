@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,7 +35,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "notes_db")
+        val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "notes_db_v2")
             .fallbackToDestructiveMigration()
             .build()
         val repository = NoteRepository(db.noteDao(), applicationContext)
@@ -81,18 +82,35 @@ fun AppNavigation(viewModel: OmniViewModel) {
             composable("history") {
                 HistoryScreen(viewModel, onBack = { navController.popBackStack() })
             }
+            composable("smart") {
+                SmartDashboardScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onOpenHistory = { navController.navigate("history") }
+                )
+            }
             composable("settings") {
                 SettingsScreen(viewModel, onBack = { navController.popBackStack() })
             }
         }
 
         if (currentRoute == "editor") {
-            SmallFloatingActionButton(
-                onClick = { navController.navigate("settings") },
+            Row(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.Settings, contentDescription = "الإعدادات")
+                SmallFloatingActionButton(
+                    onClick = { navController.navigate("smart") },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Icon(Icons.Default.Dashboard, contentDescription = stringResource(R.string.smart_dashboard))
+                }
+                SmallFloatingActionButton(
+                    onClick = { navController.navigate("settings") },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = "الإعدادات")
+                }
             }
         }
     }
