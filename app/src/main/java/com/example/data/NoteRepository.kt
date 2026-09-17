@@ -30,6 +30,7 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
     val suggestions = noteDao.getSuggestions()
     val allPayments = noteDao.getAllPayments()
     fun getItemsForNote(noteId: Long) = noteDao.getItemsForNote(noteId)
+    fun invoiceTotal(noteId: Long): Flow<Double> = noteDao.getInvoiceTotal(noteId)
     fun paymentsForCustomer(customerName: String) = noteDao.getPaymentsForCustomer(customerName.trim())
 
     suspend fun saveNote(note: Note) = noteDao.insertNote(note)
@@ -104,7 +105,7 @@ class NoteRepository(private val noteDao: NoteDao, private val context: Context)
             appendLine("==============================")
             var totalInvoices = 0.0
             notes.forEach { note ->
-                val total = getItemsForNote(note.id).first().sumOf { it.quantity * it.price }
+                val total = invoiceTotal(note.id).first()
                 totalInvoices += total
                 appendLine("فاتورة ${note.invoiceNumber.ifBlank { note.id.toString() }} | ${dateTime(note.timestamp)} | ${formatMoney(total)}")
             }
