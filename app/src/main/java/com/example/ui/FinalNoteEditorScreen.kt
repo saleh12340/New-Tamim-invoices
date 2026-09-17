@@ -7,8 +7,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -22,8 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -42,7 +39,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun FinalNoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit, onOpenCustomers: () -> Unit) {
     val note by viewModel.currentNote.collectAsStateWithLifecycle()
@@ -102,20 +99,22 @@ fun FinalNoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit, o
 
     fun changeFont(delta: Int) = viewModel.updateNoteSettings((note?.fontSize ?: 14) + delta, note?.scrollEnabled ?: true)
     @Composable fun fontButton(icon: androidx.compose.ui.graphics.vector.ImageVector, delta: Int) {
-        Box(Modifier.size(42.dp).pointerInput(note?.fontSize) {
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false)
-                var long = false
-                val start = down.uptimeMillis
-                while (true) {
-                    val event = awaitPointerEvent()
-                    if (event.changes.all { !it.pressed }) break
-                    val elapsed = event.changes.first().uptimeMillis - start
-                    if (elapsed >= 450) { long = true; changeFont(delta); delay(120) }
-                }
-                if (!long) changeFont(delta)
-            }
-        }, contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null) }
+        Box(
+            Modifier
+                .size(42.dp)
+                .combinedClickable(
+                    onClick = { changeFont(delta) },
+                    onLongClick = {
+                        scope.launch {
+                            repeat(20) {
+                                changeFont(delta)
+                                delay(120)
+                            }
+                        }
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) { Icon(icon, contentDescription = null) }
     }
 
     Scaffold(topBar={
