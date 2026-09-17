@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">فاتورة مبيعات</string>
+    <string name="app_name">فاتورة مبيعات 2</string>
     <string name="clear_page">مسح الكل</string>
     <string name="new_note">فاتورة جديدة</string>
     <string name="history">سجل الفواتير</string>
@@ -31,4 +31,5 @@
     <string name="invoice_save_failed">تعذر حفظ الفاتورة في الملفات</string>
     <string name="no_items_warning">أضف أصنافاً أولاً للطباعة أو الحفظ</string>
     <string name="confirm">نعم</string>
+    <string name="smart_dashboard">المركز الذكي</string>
 </resources>
