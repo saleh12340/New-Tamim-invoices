@@ -1,6 +1,8 @@
 package com.example.data
 
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -71,9 +73,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "CREATE TABLE IF NOT EXISTS customer_payments (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, customerName TEXT NOT NULL, amount REAL NOT NULL, details TEXT NOT NULL, timestamp INTEGER NOT NULL)"
-                )
+                database.execSQL("CREATE TABLE IF NOT EXISTS customer_payments (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, customerName TEXT NOT NULL, amount REAL NOT NULL, details TEXT NOT NULL, timestamp INTEGER NOT NULL)")
             }
         }
     }
