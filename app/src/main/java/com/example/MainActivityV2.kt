@@ -69,29 +69,22 @@ private fun AppNavigationV2(viewModel: OmniViewModel) {
     val route = backStack?.destination?.route
     Box(Modifier.fillMaxSize()) {
         NavHost(navController = nav, startDestination = "editor", modifier = Modifier.fillMaxSize()) {
-            composable("editor") { NoteEditorScreen(viewModel, onOpenHistory = { nav.navigate("history") }) }
+            composable("editor") { InvoiceEditorV2Screen(viewModel, onOpenHistory = { nav.navigate("history") }, onOpenCustomers = { nav.navigate("customers") }, onOpenSettings = { nav.navigate("settings") }) }
             composable("history") { HistoryScreen(viewModel, onBack = { nav.popBackStack() }) }
             composable("customers") {
                 CustomerAccountsScreen(
                     viewModel = viewModel,
                     onBack = { nav.popBackStack() },
-                    onOpenInvoice = { id -> viewModel.selectNote(id); nav.popBackStack() }
+                    onOpenInvoice = { id -> viewModel.selectNote(id); nav.navigate("editor") }
                 )
             }
             composable("smart") { SmartDashboardScreen(viewModel, onBack = { nav.popBackStack() }, onOpenHistory = { nav.navigate("history") }) }
             composable("settings") { SettingsScreen(viewModel, onBack = { nav.popBackStack() }) }
         }
         if (route == "editor") {
-            Row(
-                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                SmallFloatingActionButton(onClick = { nav.navigate("customers") }, containerColor = MaterialTheme.colorScheme.secondaryContainer) {
-                    Icon(Icons.Default.People, contentDescription = "حسابات العملاء")
-                }
-                SmallFloatingActionButton(onClick = { nav.navigate("settings") }, containerColor = MaterialTheme.colorScheme.primaryContainer) {
-                    Icon(Icons.Default.Settings, contentDescription = "الإعدادات")
-                }
+            Row(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SmallFloatingActionButton(onClick = { nav.navigate("customers") }, containerColor = MaterialTheme.colorScheme.secondaryContainer) { Icon(Icons.Default.People, "حسابات العملاء") }
+                SmallFloatingActionButton(onClick = { nav.navigate("settings") }, containerColor = MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Default.Settings, "الإعدادات") }
             }
         }
     }
