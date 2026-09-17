@@ -2,7 +2,7 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import androidx.activity.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
@@ -42,7 +42,13 @@ class MainActivity : ComponentActivity() {
             AppTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     var showExitDialog by remember { mutableStateOf(false) }
-                    if (showExitDialog) AlertDialog(onDismissRequest = { showExitDialog = false }, title = { Text(stringResource(R.string.exit_confirm_title)) }, text = { Text(stringResource(R.string.exit_confirm_msg)) }, confirmButton = { TextButton(onClick = { finish() }) { Text(stringResource(R.string.confirm)) } }, dismissButton = { TextButton(onClick = { showExitDialog = false }) { Text(stringResource(R.string.cancel)) } })
+                    if (showExitDialog) AlertDialog(
+                        onDismissRequest = { showExitDialog = false },
+                        title = { Text(stringResource(R.string.exit_confirm_title)) },
+                        text = { Text(stringResource(R.string.exit_confirm_msg)) },
+                        confirmButton = { TextButton(onClick = { finish() }) { Text(stringResource(R.string.confirm)) } },
+                        dismissButton = { TextButton(onClick = { showExitDialog = false }) { Text(stringResource(R.string.cancel)) } }
+                    )
                     BackHandler { showExitDialog = true }
                     val viewModel: OmniViewModel = viewModel(factory = factory)
                     AppNavigation(viewModel)
@@ -59,7 +65,7 @@ fun AppNavigation(viewModel: OmniViewModel) {
     val currentRoute = backStack?.destination?.route
     Box(Modifier.fillMaxSize()) {
         NavHost(navController, startDestination = "editor", modifier = Modifier.fillMaxSize()) {
-            composable("editor") { NoteEditorScreen(viewModel, onOpenHistory = { navController.navigate("history") }) }
+            composable("editor") { FinalNoteEditorScreen(viewModel, onOpenHistory = { navController.navigate("history") }, onOpenCustomers = { navController.navigate("customers") }) }
             composable("history") { HistoryScreen(viewModel, onBack = { navController.popBackStack() }) }
             composable("customers") { CustomerAccountsScreen(viewModel, onBack = { navController.popBackStack() }) }
             composable("smart") { SmartDashboardScreen(viewModel, onBack = { navController.popBackStack() }, onOpenHistory = { navController.navigate("history") }) }
