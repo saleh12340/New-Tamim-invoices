@@ -7,6 +7,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -20,8 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.awaitEachGesture
-import androidx.compose.ui.input.pointer.awaitFirstDown
 import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -32,11 +32,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.R
 import com.example.data.NoteItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -62,7 +60,6 @@ fun FinalNoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit, o
     val context = LocalContext.current
 
     LaunchedEffect(note?.id) { customer = TextFieldValue(note?.customerName.orEmpty()) }
-
     fun clean(s: String) = s.trim().replace(Regex("\\s+"), " ")
     fun money(v: Double) = if (v.isFinite() && v % 1.0 == 0.0) v.toLong().toString() else "%.2f".format(Locale.US, v)
     fun unitPrice(): Double { val q = qty.text.toDoubleOrNull() ?: 0.0; val t = total.text.toDoubleOrNull() ?: 0.0; return if (q > 0) t / q else 0.0 }
@@ -173,8 +170,5 @@ fun FinalNoteEditorScreen(viewModel: OmniViewModel, onOpenHistory: () -> Unit, o
 
 @Composable private fun SmallTopAppBarButton(text:String,onClick:()->Unit){Surface(onClick=onClick,color=MaterialTheme.colorScheme.primary,shape=RoundedCornerShape(6.dp),modifier=Modifier.height(34.dp)){Box(Modifier.padding(horizontal=7.dp),contentAlignment=Alignment.Center){Text(text,color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)}}}
 @Composable private fun RowScope.CellHeader(text:String,w:Float){Text(text,Modifier.weight(w),textAlign=TextAlign.Center,fontSize=10.sp,fontWeight=FontWeight.Bold)}
-
-@Composable private fun FinalItemRow(item:NoteItem,font:Int,onUpdate:(NoteItem)->Unit,onDelete:(NoteItem)->Unit){
-    Row(Modifier.fillMaxWidth().clickable{onUpdate(item)},verticalAlignment=Alignment.CenterVertically){Text(item.name,Modifier.weight(.36f).padding(4.dp),fontSize=font.coerceAtMost(14).sp,maxLines=2);Text(fmt(item.quantity),Modifier.weight(.14f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp);Text(fmt(item.price),Modifier.weight(.20f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp);Text(fmt(item.quantity*item.price),Modifier.weight(.20f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp,fontWeight=FontWeight.Bold);IconButton(onClick={onDelete(item)},modifier=Modifier.size(42.dp)){Icon(Icons.Default.Delete,null,tint=Color.Red)}}
-}
+@Composable private fun FinalItemRow(item:NoteItem,font:Int,onUpdate:(NoteItem)->Unit,onDelete:(NoteItem)->Unit){Row(Modifier.fillMaxWidth().clickable{onUpdate(item)},verticalAlignment=Alignment.CenterVertically){Text(item.name,Modifier.weight(.36f).padding(4.dp),fontSize=font.coerceAtMost(14).sp,maxLines=2);Text(fmt(item.quantity),Modifier.weight(.14f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp);Text(fmt(item.price),Modifier.weight(.20f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp);Text(fmt(item.quantity*item.price),Modifier.weight(.20f),textAlign=TextAlign.Center,fontSize=font.coerceAtMost(14).sp,fontWeight=FontWeight.Bold);IconButton(onClick={onDelete(item)},modifier=Modifier.size(42.dp)){Icon(Icons.Default.Delete,null,tint=Color.Red)}}}
 private fun fmt(v:Double)=if(v.isFinite()&&v%1.0==0.0)v.toLong().toString() else "%.2f".format(Locale.US,v)
